@@ -1,0 +1,51 @@
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&family=Fraunces:wght@400;600&display=swap');
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+:root {
+  --bg: #f4f6f2;
+  --bg-card: #ffffff;
+  --primary: #7a9e7e;
+  --primary-light: #a8c5a0;
+  --primary-dark: #5a7d5e;
+  --action: #6bbf8e;
+  --action-hover: #4da874;
+  --text: #3a3d36;
+  --text-muted: #7a7d72;
+  --border: #dde4d8;
+  --danger: #c0776a;
+  --danger-light: #f5e8e6;
+  --success: #6bbf8e;
+  --success-light: #e6f5ee;
+  --warning: #d4a853;
+  --warning-light: #fdf4e3;
+  --shadow: 0 2px 8px rgba(58, 61, 54, 0.08);
+  --shadow-md: 0 4px 16px rgba(58, 61, 54, 0.12);
+  --radius: 12px;
+  --radius-sm: 8px;
+}
+
+body {
+  font-family: 'DM Sans', sans-serif;
+  background-color: var(--bg);
+  color: var(--text);
+  line-height: 1.6;
+}
+
+h1, h2, h3 {
+  font-family: 'Fraunces', serif;
+  font-weight: 600;
+}
+
+button {
+  cursor: pointer;
+  font-family: 'DM Sans', sans-serif;
+}
+
+input, textarea, select {
+  font-family: 'DM Sans', sans-serif;
+}
