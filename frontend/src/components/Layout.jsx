@@ -1,15 +1,16 @@
 import { Outlet, NavLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import { LayoutDashboard, Package, Users, ShoppingBag, TrendingUp, Map, BookOpen, LogOut, Sprout } from 'lucide-react';
+import { LayoutDashboard, Package, Users, ShoppingBag, TrendingUp, Map, BookOpen, LogOut, Sprout, User } from 'lucide-react';
 import styles from './Layout.module.css';
 
 const navItems = [
-  { to: '/', icon: LayoutDashboard, label: 'Dashboard', end: true },
-  { to: '/produtos', icon: Package, label: 'Produtos' },
-  { to: '/clientes', icon: Users, label: 'Clientes' },
-  { to: '/vendas', icon: ShoppingBag, label: 'Vendas' },
-  { to: '/fluxo', icon: TrendingUp, label: 'Fluxo de Caixa' },
-  { to: '/capacitacao', icon: BookOpen, label: 'Capacitação' },
+  { to: '/dashboard', icon: LayoutDashboard, label: 'Dashboard', end: true },
+  { to: '/dashboard/produtos', icon: Package, label: 'Produtos' },
+  { to: '/dashboard/clientes', icon: Users, label: 'Clientes' },
+  { to: '/dashboard/vendas', icon: ShoppingBag, label: 'Vendas' },
+  { to: '/dashboard/fluxo', icon: TrendingUp, label: 'Fluxo de Caixa' },
+  { to: '/dashboard/capacitacao', icon: BookOpen, label: 'Capacitação' },
+  { to: '/dashboard/perfil', icon: User, label: 'Meu Perfil' },
 ];
 
 export default function Layout() {
@@ -18,7 +19,7 @@ export default function Layout() {
 
   function handleLogout() {
     logout();
-    navigate('/login');
+    navigate('/');
   }
 
   return (

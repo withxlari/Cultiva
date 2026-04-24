@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import api from '../services/api';
-import { Plus, Pencil, Trash2, Calculator, Eye, EyeOff } from 'lucide-react';
+import { Plus, Pencil, Trash2, Calculator, Eye, EyeOff, Search } from 'lucide-react';
 import styles from './Page.module.css';
 
 const categorias = ['Alimentação', 'Beleza', 'Costura', 'Artesanato', 'Serviços Gerais', 'Educação', 'Saúde', 'Outros'];
@@ -9,6 +9,8 @@ const formInicial = { nome: '', descricao: '', preco_custo: '', margem_lucro: 30
 
 export default function Produtos() {
   const [produtos, setProdutos] = useState([]);
+  const [filtro, setFiltro] = useState('');
+  const [busca, setBusca] = useState('');
   const [form, setForm] = useState(formInicial);
   const [editando, setEditando] = useState(null);
   const [modal, setModal] = useState(false);
@@ -16,6 +18,7 @@ export default function Produtos() {
   const [calc, setCalc] = useState({ insumos: [{ nome: '', custo: '', quantidade: 1 }], tempo_horas: '', valor_hora: '', margem_lucro: 30 });
   const [resultado, setResultado] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [sucesso, setSucesso] = useState('');
 
   useEffect(() => { carregar(); }, []);
 
@@ -24,14 +27,21 @@ export default function Produtos() {
     setProdutos(data);
   }
 
+  function mostrarSucesso(msg) {
+    setSucesso(msg);
+    setTimeout(() => setSucesso(''), 3000);
+  }
+
   async function salvar(e) {
     e.preventDefault();
     setLoading(true);
     try {
       if (editando) {
         await api.put(`/produtos/${editando}`, form);
+        mostrarSucesso('Produto atualizado com sucesso.');
       } else {
         await api.post('/produtos', form);
+        mostrarSucesso('Produto criado com sucesso.');
       }
       setModal(false);
       setForm(formInicial);
@@ -47,6 +57,7 @@ export default function Produtos() {
   async function deletar(id) {
     if (!confirm('Remover produto?')) return;
     await api.delete(`/produtos/${id}`);
+    mostrarSucesso('Produto removido.');
     carregar();
   }
 
@@ -57,17 +68,28 @@ export default function Produtos() {
   }
 
   async function calcular() {
-    const { data } = await api.post('/produtos/calcular-preco', calc);
+    const insumosValidos = calc.insumos.filter(i => i.nome && i.custo);
+    const { data } = await api.post('/produtos/calcular-preco', {
+      ...calc,
+      insumos: insumosValidos,
+    });
     setResultado(data);
   }
 
   function usarResultado() {
     setForm(f => ({ ...f, preco_custo: resultado.custo_total, preco_venda: resultado.preco_sugerido, margem_lucro: calc.margem_lucro }));
     setCalculadora(false);
+    setResultado(null);
     setModal(true);
   }
 
   const fmt = (v) => `R$ ${parseFloat(v || 0).toFixed(2).replace('.', ',')}`;
+
+  const produtosFiltrados = produtos.filter(p => {
+    const matchFiltro = !filtro || p.categoria === filtro;
+    const matchBusca = !busca || p.nome.toLowerCase().includes(busca.toLowerCase());
+    return matchFiltro && matchBusca;
+  });
 
   return (
     <div className={styles.page}>
@@ -77,7 +99,7 @@ export default function Produtos() {
           <p>Gerencie o que você vende</p>
         </div>
         <div style={{ display: 'flex', gap: 8 }}>
-          <button className={styles.btnSecondary} onClick={() => setCalculadora(true)}>
+          <button className={styles.btnSecondary} onClick={() => { setCalculadora(true); setResultado(null); }}>
             <Calculator size={16} /> Calculadora
           </button>
           <button className={styles.btn} onClick={() => { setModal(true); setForm(formInicial); setEditando(null); }}>
@@ -86,8 +108,30 @@ export default function Produtos() {
         </div>
       </div>
 
+      {sucesso && (
+        <div className={styles.sucesso}>{sucesso}</div>
+      )}
+
+      <div className={styles.filtrosRow}>
+        <div className={styles.buscaWrap}>
+          <Search size={14} />
+          <input
+            placeholder="Buscar produto..."
+            value={busca}
+            onChange={e => setBusca(e.target.value)}
+            className={styles.buscaInput}
+          />
+        </div>
+        <div className={styles.filtros}>
+          <button className={`${styles.filtroBtn} ${filtro === '' ? styles.filtroAtivo : ''}`} onClick={() => setFiltro('')}>Todos</button>
+          {categorias.map(c => (
+            <button key={c} className={`${styles.filtroBtn} ${filtro === c ? styles.filtroAtivo : ''}`} onClick={() => setFiltro(c)}>{c}</button>
+          ))}
+        </div>
+      </div>
+
       <div className={styles.grid}>
-        {produtos.map(p => (
+        {produtosFiltrados.map(p => (
           <div key={p.id} className={styles.card}>
             <div className={styles.cardHeader}>
               <span className={styles.badge}>{p.categoria || 'Sem categoria'}</span>
@@ -100,11 +144,15 @@ export default function Produtos() {
             {p.descricao && <p className={styles.cardDesc}>{p.descricao}</p>}
             <div className={styles.cardFooter}>
               <strong className={styles.preco}>{fmt(p.preco_venda)}</strong>
-              <span className={styles.vitrine}>{p.visivel_vitrine ? <Eye size={14} /> : <EyeOff size={14} />}</span>
+              <span className={styles.vitrine} title={p.visivel_vitrine ? 'Visível na vitrine' : 'Oculto da vitrine'}>
+                {p.visivel_vitrine ? <Eye size={14} /> : <EyeOff size={14} />}
+              </span>
             </div>
           </div>
         ))}
-        {produtos.length === 0 && <p className={styles.empty}>Nenhum produto cadastrado ainda.</p>}
+        {produtosFiltrados.length === 0 && (
+          <p className={styles.empty}>Nenhum produto encontrado.</p>
+        )}
       </div>
 
       {modal && (
@@ -161,25 +209,25 @@ export default function Produtos() {
           <div className={styles.modal} onClick={e => e.stopPropagation()}>
             <h2>Calculadora de preço</h2>
             <div className={styles.form}>
-              <label style={{ fontSize: 13, fontWeight: 600 }}>Insumos</label>
+              <label style={{ fontSize: 13, fontWeight: 600 }}>Insumos (materiais usados)</label>
               {calc.insumos.map((ins, i) => (
                 <div key={i} className={styles.grid3}>
-                  <input placeholder="Nome" value={ins.nome} onChange={e => { const n = [...calc.insumos]; n[i].nome = e.target.value; setCalc({ ...calc, insumos: n }); }} />
+                  <input placeholder="Nome do material" value={ins.nome} onChange={e => { const n = [...calc.insumos]; n[i].nome = e.target.value; setCalc({ ...calc, insumos: n }); }} />
                   <input placeholder="Custo R$" type="number" step="0.01" value={ins.custo} onChange={e => { const n = [...calc.insumos]; n[i].custo = e.target.value; setCalc({ ...calc, insumos: n }); }} />
                   <input placeholder="Qtd" type="number" value={ins.quantidade} onChange={e => { const n = [...calc.insumos]; n[i].quantidade = e.target.value; setCalc({ ...calc, insumos: n }); }} />
                 </div>
               ))}
               <button type="button" className={styles.btnSecondary} onClick={() => setCalc({ ...calc, insumos: [...calc.insumos, { nome: '', custo: '', quantidade: 1 }] })}>
-                + Adicionar insumo
+                + Adicionar material
               </button>
               <div className={styles.grid2}>
                 <div className={styles.field}>
-                  <label>Horas trabalhadas</label>
-                  <input type="number" step="0.5" value={calc.tempo_horas} onChange={e => setCalc({ ...calc, tempo_horas: e.target.value })} />
+                  <label>Horas para produzir</label>
+                  <input type="number" step="0.5" placeholder="Ex: 2" value={calc.tempo_horas} onChange={e => setCalc({ ...calc, tempo_horas: e.target.value })} />
                 </div>
                 <div className={styles.field}>
-                  <label>Valor por hora (R$)</label>
-                  <input type="number" step="0.01" value={calc.valor_hora} onChange={e => setCalc({ ...calc, valor_hora: e.target.value })} />
+                  <label>Quanto vale sua hora (R$)</label>
+                  <input type="number" step="0.01" placeholder="Ex: 15,00" value={calc.valor_hora} onChange={e => setCalc({ ...calc, valor_hora: e.target.value })} />
                 </div>
               </div>
               <div className={styles.field}>
@@ -189,7 +237,7 @@ export default function Produtos() {
               <button className={styles.btn} onClick={calcular}>Calcular</button>
               {resultado && (
                 <div className={styles.resultado}>
-                  <div className={styles.resultRow}><span>Custo insumos</span><strong>R$ {resultado.custo_insumos}</strong></div>
+                  <div className={styles.resultRow}><span>Custo materiais</span><strong>R$ {resultado.custo_insumos}</strong></div>
                   <div className={styles.resultRow}><span>Custo mão de obra</span><strong>R$ {resultado.custo_tempo}</strong></div>
                   <div className={styles.resultRow}><span>Custo total</span><strong>R$ {resultado.custo_total}</strong></div>
                   <div className={`${styles.resultRow} ${styles.resultDestaque}`}><span>Preço sugerido</span><strong>R$ {resultado.preco_sugerido}</strong></div>
