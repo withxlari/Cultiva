@@ -27,11 +27,15 @@ export async function criar(req, res) {
   const { cliente_id, produto_id, descricao, valor, tipo, status, data_vencimento } = req.body;
   if (!valor) return res.status(400).json({ error: 'Valor é obrigatório.' });
 
+  const clienteId = cliente_id || null;
+  const produtoId = produto_id || null;
+  const dataVencimento = data_vencimento || null;
+
   try {
     const result = await pool.query(
       `INSERT INTO vendas (usuario_id, cliente_id, produto_id, descricao, valor, tipo, status, data_vencimento)
        VALUES ($1,$2,$3,$4,$5,$6,$7,$8) RETURNING *`,
-      [req.usuario.id, cliente_id, produto_id, descricao, valor, tipo || 'avista', status || 'pago', data_vencimento]
+      [req.usuario.id, clienteId, produtoId, descricao, valor, tipo || 'avista', status || 'pago', dataVencimento]
     );
 
     if ((tipo || 'avista') === 'avista') {

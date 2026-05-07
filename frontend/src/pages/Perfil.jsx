@@ -1,14 +1,17 @@
 import { useState, useEffect } from 'react';
-import { useAuth } from '../contexts/AuthContext';
 import api from '../services/api';
-import { MapPin, Save, CheckCircle } from 'lucide-react';
+import { MapPin, Save, CheckCircle, AtSign, Clock, CreditCard, ShoppingBag, Truck } from 'lucide-react';
 import styles from './Page.module.css';
 
 const categorias = ['Alimentação', 'Beleza', 'Costura', 'Artesanato', 'Serviços Gerais', 'Educação', 'Saúde', 'Outros'];
 
 export default function Perfil() {
-  const { usuario, login } = useAuth();
-  const [form, setForm] = useState({ nome: '', nome_negocio: '', descricao_negocio: '', categoria: '', telefone: '', endereco_texto: '', latitude: '', longitude: '' });
+  const [form, setForm] = useState({
+    nome: '', nome_negocio: '', descricao_negocio: '', categoria: '',
+    telefone: '', endereco_texto: '', latitude: '', longitude: '',
+    instagram: '', horario_funcionamento: '', formas_pagamento: '',
+    aceita_encomenda: false, entrega_bairro: false,
+  });
   const [loading, setLoading] = useState(false);
   const [localizando, setLocalizando] = useState(false);
   const [sucesso, setSucesso] = useState('');
@@ -26,6 +29,11 @@ export default function Perfil() {
         endereco_texto: data.endereco_texto || '',
         latitude: data.latitude || '',
         longitude: data.longitude || '',
+        instagram: data.instagram || '',
+        horario_funcionamento: data.horario_funcionamento || '',
+        formas_pagamento: data.formas_pagamento || '',
+        aceita_encomenda: data.aceita_encomenda || false,
+        entrega_bairro: data.entrega_bairro || false,
       });
     }
     carregar();
@@ -75,6 +83,7 @@ export default function Perfil() {
 
       <form onSubmit={salvar}>
         <div className={styles.perfilGrid}>
+
           <div className={styles.perfilCard}>
             <h2 className={styles.perfilSecao}>Dados pessoais</h2>
             <div className={styles.field}>
@@ -82,7 +91,7 @@ export default function Perfil() {
               <input value={form.nome} onChange={e => setForm({ ...form, nome: e.target.value })} required />
             </div>
             <div className={styles.field}>
-              <label>Telefone</label>
+              <label>Telefone (WhatsApp)</label>
               <input value={form.telefone} onChange={e => setForm({ ...form, telefone: e.target.value })} placeholder="(11) 99999-9999" />
             </div>
           </div>
@@ -107,6 +116,43 @@ export default function Perfil() {
           </div>
 
           <div className={styles.perfilCard}>
+            <h2 className={styles.perfilSecao}>Presença e contato</h2>
+            <div className={styles.field}>
+              <label>
+                <AtSign size={14} style={{ display: 'inline', marginRight: 4 }} />
+                Instagram
+              </label>
+              <input value={form.instagram} onChange={e => setForm({ ...form, instagram: e.target.value })} placeholder="@seunegocio" />
+            </div>
+            <div className={styles.field}>
+              <label>
+                <Clock size={14} style={{ display: 'inline', marginRight: 4 }} />
+                Horário de funcionamento
+              </label>
+              <input value={form.horario_funcionamento} onChange={e => setForm({ ...form, horario_funcionamento: e.target.value })} placeholder="Ex: Seg-Sex 8h às 18h, Sáb 8h às 13h" />
+            </div>
+            <div className={styles.field}>
+              <label>
+                <CreditCard size={14} style={{ display: 'inline', marginRight: 4 }} />
+                Formas de pagamento
+              </label>
+              <input value={form.formas_pagamento} onChange={e => setForm({ ...form, formas_pagamento: e.target.value })} placeholder="Ex: Pix, dinheiro, cartão de débito" />
+            </div>
+            <div className={styles.perfilChecks}>
+              <label className={styles.checkLabel}>
+                <input type="checkbox" checked={form.aceita_encomenda} onChange={e => setForm({ ...form, aceita_encomenda: e.target.checked })} />
+                <ShoppingBag size={14} />
+                Aceita encomenda
+              </label>
+              <label className={styles.checkLabel}>
+                <input type="checkbox" checked={form.entrega_bairro} onChange={e => setForm({ ...form, entrega_bairro: e.target.checked })} />
+                <Truck size={14} />
+                Faz entrega no bairro
+              </label>
+            </div>
+          </div>
+
+          <div className={styles.perfilCard}>
             <h2 className={styles.perfilSecao}>Localização</h2>
             <p className={styles.perfilDica}>Sua localização é usada para aparecer na vitrine quando clientes buscam negócios próximos.</p>
             <div className={styles.field}>
@@ -124,6 +170,7 @@ export default function Perfil() {
               </div>
             )}
           </div>
+
         </div>
 
         <div className={styles.perfilFooter}>

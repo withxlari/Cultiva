@@ -10,8 +10,15 @@ export async function buscarPorProximidade(req, res) {
     SELECT
       u.id, u.nome_negocio, u.descricao_negocio, u.categoria,
       u.telefone, u.endereco_texto, u.latitude, u.longitude,
+      u.instagram, u.horario_funcionamento, u.formas_pagamento,
+      u.aceita_encomenda, u.entrega_bairro,
       (6371 * acos(LEAST(1, cos(radians($1)) * cos(radians(u.latitude)) * cos(radians(u.longitude) - radians($2)) + sin(radians($1)) * sin(radians(u.latitude))))) AS distancia_km,
-      json_agg(json_build_object('id', p.id, 'nome', p.nome, 'descricao', p.descricao, 'preco_venda', p.preco_venda, 'categoria', p.categoria) ORDER BY p.nome) FILTER (WHERE p.id IS NOT NULL) as produtos
+      json_agg(
+        json_build_object(
+          'id', p.id, 'nome', p.nome, 'descricao', p.descricao,
+          'preco_venda', p.preco_venda, 'categoria', p.categoria, 'imagem_url', p.imagem_url
+        ) ORDER BY p.nome
+      ) FILTER (WHERE p.id IS NOT NULL) as produtos
     FROM usuarios u
     LEFT JOIN produtos_servicos p ON p.usuario_id = u.id AND p.visivel_vitrine = true
     WHERE u.ativo = true AND u.latitude IS NOT NULL AND u.longitude IS NOT NULL
@@ -42,14 +49,15 @@ export async function detalheNegocio(req, res) {
   const { id } = req.params;
   try {
     const negocio = await pool.query(
-      `SELECT id, nome_negocio, descricao_negocio, categoria, telefone, endereco_texto, latitude, longitude
+      `SELECT id, nome_negocio, descricao_negocio, categoria, telefone, endereco_texto, latitude, longitude,
+        instagram, horario_funcionamento, formas_pagamento, aceita_encomenda, entrega_bairro
        FROM usuarios WHERE id=$1 AND ativo=true`,
       [id]
     );
     if (negocio.rows.length === 0) return res.status(404).json({ error: 'Negócio não encontrado.' });
 
     const produtos = await pool.query(
-      'SELECT id, nome, descricao, preco_venda, categoria FROM produtos_servicos WHERE usuario_id=$1 AND visivel_vitrine=true ORDER BY nome',
+      'SELECT id, nome, descricao, preco_venda, categoria, imagem_url FROM produtos_servicos WHERE usuario_id=$1 AND visivel_vitrine=true ORDER BY nome',
       [id]
     );
 

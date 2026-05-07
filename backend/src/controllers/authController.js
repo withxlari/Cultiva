@@ -26,7 +26,6 @@ export async function register(req, res) {
 
     const usuario = result.rows[0];
     const token = jwt.sign({ id: usuario.id, email: usuario.email }, process.env.JWT_SECRET, { expiresIn: '7d' });
-
     return res.status(201).json({ usuario, token });
   } catch (err) {
     return res.status(500).json({ error: 'Erro ao registrar.', detail: err.message });
@@ -63,7 +62,9 @@ export async function login(req, res) {
 export async function getMe(req, res) {
   try {
     const result = await pool.query(
-      'SELECT id, nome, email, nome_negocio, descricao_negocio, categoria, telefone, latitude, longitude, endereco_texto, created_at FROM usuarios WHERE id = $1',
+      `SELECT id, nome, email, nome_negocio, descricao_negocio, categoria, telefone, latitude, longitude,
+        endereco_texto, instagram, horario_funcionamento, formas_pagamento, aceita_encomenda, entrega_bairro, created_at
+       FROM usuarios WHERE id = $1`,
       [req.usuario.id]
     );
     if (result.rows.length === 0) {
@@ -76,14 +77,19 @@ export async function getMe(req, res) {
 }
 
 export async function updateMe(req, res) {
-  const { nome, nome_negocio, descricao_negocio, categoria, telefone, latitude, longitude, endereco_texto } = req.body;
+  const { nome, nome_negocio, descricao_negocio, categoria, telefone, latitude, longitude, endereco_texto, instagram, horario_funcionamento, formas_pagamento, aceita_encomenda, entrega_bairro } = req.body;
 
   try {
     const result = await pool.query(
-      `UPDATE usuarios SET nome=$1, nome_negocio=$2, descricao_negocio=$3, categoria=$4, telefone=$5, latitude=$6, longitude=$7, endereco_texto=$8, updated_at=NOW()
-       WHERE id=$9
-       RETURNING id, nome, email, nome_negocio, descricao_negocio, categoria, telefone, latitude, longitude, endereco_texto`,
-      [nome, nome_negocio, descricao_negocio, categoria, telefone, latitude, longitude, endereco_texto, req.usuario.id]
+      `UPDATE usuarios SET
+        nome=$1, nome_negocio=$2, descricao_negocio=$3, categoria=$4, telefone=$5,
+        latitude=$6, longitude=$7, endereco_texto=$8, instagram=$9,
+        horario_funcionamento=$10, formas_pagamento=$11, aceita_encomenda=$12, entrega_bairro=$13,
+        updated_at=NOW()
+       WHERE id=$14
+       RETURNING id, nome, email, nome_negocio, descricao_negocio, categoria, telefone, latitude, longitude,
+        endereco_texto, instagram, horario_funcionamento, formas_pagamento, aceita_encomenda, entrega_bairro`,
+      [nome, nome_negocio, descricao_negocio, categoria, telefone, latitude, longitude, endereco_texto, instagram, horario_funcionamento, formas_pagamento, aceita_encomenda, entrega_bairro, req.usuario.id]
     );
     return res.json(result.rows[0]);
   } catch (err) {
