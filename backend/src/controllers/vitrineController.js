@@ -11,7 +11,7 @@ export async function buscarPorProximidade(req, res) {
       u.id, u.nome_negocio, u.descricao_negocio, u.categoria,
       u.telefone, u.endereco_texto, u.latitude, u.longitude,
       u.instagram, u.horario_funcionamento, u.formas_pagamento,
-      u.aceita_encomenda, u.entrega_bairro,
+      u.aceita_encomenda, u.entrega_bairro, u.logo_url, u.capa_url,
       (6371 * acos(LEAST(1, cos(radians($1)) * cos(radians(u.latitude)) * cos(radians(u.longitude) - radians($2)) + sin(radians($1)) * sin(radians(u.latitude))))) AS distancia_km,
       json_agg(
         json_build_object(
@@ -50,7 +50,7 @@ export async function detalheNegocio(req, res) {
   try {
     const negocio = await pool.query(
       `SELECT id, nome_negocio, descricao_negocio, categoria, telefone, endereco_texto, latitude, longitude,
-        instagram, horario_funcionamento, formas_pagamento, aceita_encomenda, entrega_bairro
+        instagram, horario_funcionamento, formas_pagamento, aceita_encomenda, entrega_bairro, logo_url, capa_url
        FROM usuarios WHERE id=$1 AND ativo=true`,
       [id]
     );

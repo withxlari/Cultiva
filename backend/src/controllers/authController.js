@@ -63,13 +63,12 @@ export async function getMe(req, res) {
   try {
     const result = await pool.query(
       `SELECT id, nome, email, nome_negocio, descricao_negocio, categoria, telefone, latitude, longitude,
-        endereco_texto, instagram, horario_funcionamento, formas_pagamento, aceita_encomenda, entrega_bairro, created_at
+        endereco_texto, instagram, horario_funcionamento, formas_pagamento, aceita_encomenda, entrega_bairro,
+        logo_url, capa_url, created_at
        FROM usuarios WHERE id = $1`,
       [req.usuario.id]
     );
-    if (result.rows.length === 0) {
-      return res.status(404).json({ error: 'Usuário não encontrado.' });
-    }
+    if (result.rows.length === 0) return res.status(404).json({ error: 'Usuário não encontrado.' });
     return res.json(result.rows[0]);
   } catch (err) {
     return res.status(500).json({ error: 'Erro ao buscar perfil.', detail: err.message });
@@ -77,7 +76,7 @@ export async function getMe(req, res) {
 }
 
 export async function updateMe(req, res) {
-  const { nome, nome_negocio, descricao_negocio, categoria, telefone, latitude, longitude, endereco_texto, instagram, horario_funcionamento, formas_pagamento, aceita_encomenda, entrega_bairro } = req.body;
+  const { nome, nome_negocio, descricao_negocio, categoria, telefone, latitude, longitude, endereco_texto, instagram, horario_funcionamento, formas_pagamento, aceita_encomenda, entrega_bairro, logo_url, capa_url } = req.body;
 
   try {
     const result = await pool.query(
@@ -85,11 +84,12 @@ export async function updateMe(req, res) {
         nome=$1, nome_negocio=$2, descricao_negocio=$3, categoria=$4, telefone=$5,
         latitude=$6, longitude=$7, endereco_texto=$8, instagram=$9,
         horario_funcionamento=$10, formas_pagamento=$11, aceita_encomenda=$12, entrega_bairro=$13,
-        updated_at=NOW()
-       WHERE id=$14
+        logo_url=$14, capa_url=$15, updated_at=NOW()
+       WHERE id=$16
        RETURNING id, nome, email, nome_negocio, descricao_negocio, categoria, telefone, latitude, longitude,
-        endereco_texto, instagram, horario_funcionamento, formas_pagamento, aceita_encomenda, entrega_bairro`,
-      [nome, nome_negocio, descricao_negocio, categoria, telefone, latitude, longitude, endereco_texto, instagram, horario_funcionamento, formas_pagamento, aceita_encomenda, entrega_bairro, req.usuario.id]
+        endereco_texto, instagram, horario_funcionamento, formas_pagamento, aceita_encomenda, entrega_bairro,
+        logo_url, capa_url`,
+      [nome, nome_negocio, descricao_negocio, categoria, telefone, latitude, longitude, endereco_texto, instagram, horario_funcionamento, formas_pagamento, aceita_encomenda, entrega_bairro, logo_url, capa_url, req.usuario.id]
     );
     return res.json(result.rows[0]);
   } catch (err) {

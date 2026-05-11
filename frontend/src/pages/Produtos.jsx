@@ -1,11 +1,11 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import api from '../services/api';
-import { Plus, Pencil, Trash2, Calculator, Eye, EyeOff, Search } from 'lucide-react';
+import { uploadImagem } from '../services/cloudinary';
+import { Plus, Pencil, Trash2, Calculator, Eye, EyeOff, Search, ImagePlus, Camera } from 'lucide-react';
 import styles from './Page.module.css';
 
 const categorias = ['Alimentação', 'Beleza', 'Costura', 'Artesanato', 'Serviços Gerais', 'Educação', 'Saúde', 'Outros'];
-
-const formInicial = { nome: '', descricao: '', preco_custo: '', margem_lucro: 30, preco_venda: '', categoria: '', visivel_vitrine: true };
+const formInicial = { nome: '', descricao: '', preco_custo: '', margem_lucro: 30, preco_venda: '', categoria: '', visivel_vitrine: true, imagem_url: '' };
 
 export default function Produtos() {
   const [produtos, setProdutos] = useState([]);
@@ -18,7 +18,9 @@ export default function Produtos() {
   const [calc, setCalc] = useState({ insumos: [{ nome: '', custo: '', quantidade: 1 }], tempo_horas: '', valor_hora: '', margem_lucro: 30 });
   const [resultado, setResultado] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [uploadando, setUploadando] = useState(false);
   const [sucesso, setSucesso] = useState('');
+  const imgRef = useRef();
 
   useEffect(() => { carregar(); }, []);
 
@@ -30,6 +32,20 @@ export default function Produtos() {
   function mostrarSucesso(msg) {
     setSucesso(msg);
     setTimeout(() => setSucesso(''), 3000);
+  }
+
+  async function handleUploadImagem(e) {
+    const file = e.target.files[0];
+    if (!file) return;
+    setUploadando(true);
+    try {
+      const url = await uploadImagem(file);
+      setForm(f => ({ ...f, imagem_url: url }));
+    } catch {
+      alert('Erro ao fazer upload da imagem.');
+    } finally {
+      setUploadando(false);
+    }
   }
 
   async function salvar(e) {
@@ -62,17 +78,19 @@ export default function Produtos() {
   }
 
   function editar(p) {
-    setForm({ nome: p.nome, descricao: p.descricao || '', preco_custo: p.preco_custo, margem_lucro: p.margem_lucro, preco_venda: p.preco_venda, categoria: p.categoria || '', visivel_vitrine: p.visivel_vitrine });
+    setForm({
+      nome: p.nome, descricao: p.descricao || '', preco_custo: p.preco_custo,
+      margem_lucro: p.margem_lucro, preco_venda: p.preco_venda,
+      categoria: p.categoria || '', visivel_vitrine: p.visivel_vitrine,
+      imagem_url: p.imagem_url || '',
+    });
     setEditando(p.id);
     setModal(true);
   }
 
   async function calcular() {
     const insumosValidos = calc.insumos.filter(i => i.nome && i.custo);
-    const { data } = await api.post('/produtos/calcular-preco', {
-      ...calc,
-      insumos: insumosValidos,
-    });
+    const { data } = await api.post('/produtos/calcular-preco', { ...calc, insumos: insumosValidos });
     setResultado(data);
   }
 
@@ -108,19 +126,12 @@ export default function Produtos() {
         </div>
       </div>
 
-      {sucesso && (
-        <div className={styles.sucesso}>{sucesso}</div>
-      )}
+      {sucesso && <div className={styles.sucesso}>{sucesso}</div>}
 
       <div className={styles.filtrosRow}>
         <div className={styles.buscaWrap}>
           <Search size={14} />
-          <input
-            placeholder="Buscar produto..."
-            value={busca}
-            onChange={e => setBusca(e.target.value)}
-            className={styles.buscaInput}
-          />
+          <input placeholder="Buscar produto..." value={busca} onChange={e => setBusca(e.target.value)} className={styles.buscaInput} />
         </div>
         <div className={styles.filtros}>
           <button className={`${styles.filtroBtn} ${filtro === '' ? styles.filtroAtivo : ''}`} onClick={() => setFiltro('')}>Todos</button>
@@ -133,6 +144,10 @@ export default function Produtos() {
       <div className={styles.grid}>
         {produtosFiltrados.map(p => (
           <div key={p.id} className={styles.card}>
+            {p.imagem_url
+              ? <img src={p.imagem_url} alt={p.nome} className={styles.cardImg} />
+              : <div className={styles.cardImgPlaceholder}><ImagePlus size={20} /></div>
+            }
             <div className={styles.cardHeader}>
               <span className={styles.badge}>{p.categoria || 'Sem categoria'}</span>
               <div style={{ display: 'flex', gap: 4 }}>
@@ -150,9 +165,7 @@ export default function Produtos() {
             </div>
           </div>
         ))}
-        {produtosFiltrados.length === 0 && (
-          <p className={styles.empty}>Nenhum produto encontrado.</p>
-        )}
+        {produtosFiltrados.length === 0 && <p className={styles.empty}>Nenhum produto encontrado.</p>}
       </div>
 
       {modal && (
@@ -160,6 +173,16 @@ export default function Produtos() {
           <div className={styles.modal} onClick={e => e.stopPropagation()}>
             <h2>{editando ? 'Editar produto' : 'Novo produto'}</h2>
             <form onSubmit={salvar} className={styles.form}>
+              <div className={styles.imgUploadWrap}>
+                {form.imagem_url
+                  ? <img src={form.imagem_url} alt="Produto" className={styles.imgPreview} />
+                  : <div className={styles.imgPlaceholder}><ImagePlus size={24} /><span>Foto do produto</span></div>
+                }
+                <button type="button" className={styles.btnUploadImg} onClick={() => imgRef.current.click()} disabled={uploadando}>
+                  <Camera size={14} /> {uploadando ? 'Enviando...' : 'Escolher foto'}
+                </button>
+                <input ref={imgRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={handleUploadImagem} />
+              </div>
               <div className={styles.field}>
                 <label>Nome</label>
                 <input value={form.nome} onChange={e => setForm({ ...form, nome: e.target.value })} required />

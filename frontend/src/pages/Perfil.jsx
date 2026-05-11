@@ -1,6 +1,7 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import api from '../services/api';
-import { MapPin, Save, CheckCircle, AtSign, Clock, CreditCard, ShoppingBag, Truck } from 'lucide-react';
+import { uploadImagem } from '../services/cloudinary';
+import { MapPin, Save, CheckCircle, AtSign, Clock, CreditCard, ShoppingBag, Truck, Camera, ImagePlus } from 'lucide-react';
 import styles from './Page.module.css';
 
 const categorias = ['Alimentação', 'Beleza', 'Costura', 'Artesanato', 'Serviços Gerais', 'Educação', 'Saúde', 'Outros'];
@@ -11,11 +12,16 @@ export default function Perfil() {
     telefone: '', endereco_texto: '', latitude: '', longitude: '',
     instagram: '', horario_funcionamento: '', formas_pagamento: '',
     aceita_encomenda: false, entrega_bairro: false,
+    logo_url: '', capa_url: '',
   });
   const [loading, setLoading] = useState(false);
   const [localizando, setLocalizando] = useState(false);
+  const [uploadandoLogo, setUploadandoLogo] = useState(false);
+  const [uploadandoCapa, setUploadandoCapa] = useState(false);
   const [sucesso, setSucesso] = useState('');
   const [erro, setErro] = useState('');
+  const logoRef = useRef();
+  const capaRef = useRef();
 
   useEffect(() => {
     async function carregar() {
@@ -34,6 +40,8 @@ export default function Perfil() {
         formas_pagamento: data.formas_pagamento || '',
         aceita_encomenda: data.aceita_encomenda || false,
         entrega_bairro: data.entrega_bairro || false,
+        logo_url: data.logo_url || '',
+        capa_url: data.capa_url || '',
       });
     }
     carregar();
@@ -52,6 +60,34 @@ export default function Perfil() {
         setLocalizando(false);
       }
     );
+  }
+
+  async function handleUploadLogo(e) {
+    const file = e.target.files[0];
+    if (!file) return;
+    setUploadandoLogo(true);
+    try {
+      const url = await uploadImagem(file);
+      setForm(f => ({ ...f, logo_url: url }));
+    } catch {
+      setErro('Erro ao fazer upload da logo.');
+    } finally {
+      setUploadandoLogo(false);
+    }
+  }
+
+  async function handleUploadCapa(e) {
+    const file = e.target.files[0];
+    if (!file) return;
+    setUploadandoCapa(true);
+    try {
+      const url = await uploadImagem(file);
+      setForm(f => ({ ...f, capa_url: url }));
+    } catch {
+      setErro('Erro ao fazer upload da capa.');
+    } finally {
+      setUploadandoCapa(false);
+    }
   }
 
   async function salvar(e) {
@@ -83,6 +119,32 @@ export default function Perfil() {
 
       <form onSubmit={salvar}>
         <div className={styles.perfilGrid}>
+
+          <div className={styles.perfilCard}>
+            <h2 className={styles.perfilSecao}>Imagens da loja</h2>
+            <div className={styles.imagensLoja}>
+              <div className={styles.capaWrap}>
+                {form.capa_url
+                  ? <img src={form.capa_url} alt="Capa" className={styles.capaImg} />
+                  : <div className={styles.capaPlaceholder}><ImagePlus size={24} /><span>Foto de capa</span></div>
+                }
+                <button type="button" className={styles.btnUploadCapa} onClick={() => capaRef.current.click()} disabled={uploadandoCapa}>
+                  <Camera size={14} /> {uploadandoCapa ? 'Enviando...' : 'Alterar capa'}
+                </button>
+                <input ref={capaRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={handleUploadCapa} />
+              </div>
+              <div className={styles.logoWrap}>
+                {form.logo_url
+                  ? <img src={form.logo_url} alt="Logo" className={styles.logoImg} />
+                  : <div className={styles.logoPlaceholder}><Camera size={20} /></div>
+                }
+                <button type="button" className={styles.btnUploadLogo} onClick={() => logoRef.current.click()} disabled={uploadandoLogo}>
+                  {uploadandoLogo ? 'Enviando...' : 'Alterar logo'}
+                </button>
+                <input ref={logoRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={handleUploadLogo} />
+              </div>
+            </div>
+          </div>
 
           <div className={styles.perfilCard}>
             <h2 className={styles.perfilSecao}>Dados pessoais</h2>
@@ -118,36 +180,25 @@ export default function Perfil() {
           <div className={styles.perfilCard}>
             <h2 className={styles.perfilSecao}>Presença e contato</h2>
             <div className={styles.field}>
-              <label>
-                <AtSign size={14} style={{ display: 'inline', marginRight: 4 }} />
-                Instagram
-              </label>
+              <label><AtSign size={14} style={{ display: 'inline', marginRight: 4 }} />Instagram</label>
               <input value={form.instagram} onChange={e => setForm({ ...form, instagram: e.target.value })} placeholder="@seunegocio" />
             </div>
             <div className={styles.field}>
-              <label>
-                <Clock size={14} style={{ display: 'inline', marginRight: 4 }} />
-                Horário de funcionamento
-              </label>
+              <label><Clock size={14} style={{ display: 'inline', marginRight: 4 }} />Horário de funcionamento</label>
               <input value={form.horario_funcionamento} onChange={e => setForm({ ...form, horario_funcionamento: e.target.value })} placeholder="Ex: Seg-Sex 8h às 18h, Sáb 8h às 13h" />
             </div>
             <div className={styles.field}>
-              <label>
-                <CreditCard size={14} style={{ display: 'inline', marginRight: 4 }} />
-                Formas de pagamento
-              </label>
+              <label><CreditCard size={14} style={{ display: 'inline', marginRight: 4 }} />Formas de pagamento</label>
               <input value={form.formas_pagamento} onChange={e => setForm({ ...form, formas_pagamento: e.target.value })} placeholder="Ex: Pix, dinheiro, cartão de débito" />
             </div>
             <div className={styles.perfilChecks}>
               <label className={styles.checkLabel}>
                 <input type="checkbox" checked={form.aceita_encomenda} onChange={e => setForm({ ...form, aceita_encomenda: e.target.checked })} />
-                <ShoppingBag size={14} />
-                Aceita encomenda
+                <ShoppingBag size={14} /> Aceita encomenda
               </label>
               <label className={styles.checkLabel}>
                 <input type="checkbox" checked={form.entrega_bairro} onChange={e => setForm({ ...form, entrega_bairro: e.target.checked })} />
-                <Truck size={14} />
-                Faz entrega no bairro
+                <Truck size={14} /> Faz entrega no bairro
               </label>
             </div>
           </div>

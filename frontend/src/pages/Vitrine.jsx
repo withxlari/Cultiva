@@ -15,8 +15,15 @@ function ModalNegocio({ negocio, onClose, fmt }) {
       <div className={styles.modalBox} onClick={e => e.stopPropagation()}>
         <button className={styles.modalClose} onClick={onClose}><X size={20} /></button>
 
+        {negocio.capa_url && (
+          <img src={negocio.capa_url} alt="Capa" className={styles.modalCapa} />
+        )}
+
         <div className={styles.modalHeader}>
-          <div className={styles.modalAvatar}>{(negocio.nome_negocio || '?').charAt(0)}</div>
+          {negocio.logo_url
+            ? <img src={negocio.logo_url} alt="Logo" className={styles.modalLogo} />
+            : <div className={styles.modalAvatar}>{(negocio.nome_negocio || '?').charAt(0)}</div>
+          }
           <div>
             <h2>{negocio.nome_negocio || 'Negócio'}</h2>
             <div className={styles.modalMeta}>
@@ -28,39 +35,28 @@ function ModalNegocio({ negocio, onClose, fmt }) {
           </div>
         </div>
 
-        <div className={styles.modalTags}>
-          {negocio.aceita_encomenda && (
-            <span className={styles.tag}><ShoppingBag size={12} /> Aceita encomenda</span>
-          )}
-          {negocio.entrega_bairro && (
-            <span className={styles.tag}><Truck size={12} /> Entrega no bairro</span>
-          )}
-        </div>
-
-        {negocio.descricao_negocio && (
-          <p className={styles.modalDesc}>{negocio.descricao_negocio}</p>
+        {(negocio.aceita_encomenda || negocio.entrega_bairro) && (
+          <div className={styles.modalTags}>
+            {negocio.aceita_encomenda && <span className={styles.tag}><ShoppingBag size={12} /> Aceita encomenda</span>}
+            {negocio.entrega_bairro && <span className={styles.tag}><Truck size={12} /> Entrega no bairro</span>}
+          </div>
         )}
 
-        <div className={styles.modalInfos}>
-          {negocio.horario_funcionamento && (
-            <div className={styles.modalInfo}>
-              <Clock size={14} />
-              <span>{negocio.horario_funcionamento}</span>
-            </div>
-          )}
-          {negocio.formas_pagamento && (
-            <div className={styles.modalInfo}>
-              <CreditCard size={14} />
-              <span>{negocio.formas_pagamento}</span>
-            </div>
-          )}
-          {negocio.endereco_texto && (
-            <div className={styles.modalInfo}>
-              <MapPin size={14} />
-              <span>{negocio.endereco_texto}</span>
-            </div>
-          )}
-        </div>
+        {negocio.descricao_negocio && <p className={styles.modalDesc}>{negocio.descricao_negocio}</p>}
+
+        {(negocio.horario_funcionamento || negocio.formas_pagamento || negocio.endereco_texto) && (
+          <div className={styles.modalInfos}>
+            {negocio.horario_funcionamento && (
+              <div className={styles.modalInfo}><Clock size={14} /><span>{negocio.horario_funcionamento}</span></div>
+            )}
+            {negocio.formas_pagamento && (
+              <div className={styles.modalInfo}><CreditCard size={14} /><span>{negocio.formas_pagamento}</span></div>
+            )}
+            {negocio.endereco_texto && (
+              <div className={styles.modalInfo}><MapPin size={14} /><span>{negocio.endereco_texto}</span></div>
+            )}
+          </div>
+        )}
 
         <div className={styles.modalContatos}>
           {negocio.telefone && (
@@ -81,11 +77,10 @@ function ModalNegocio({ negocio, onClose, fmt }) {
             <div className={styles.produtosGrid}>
               {negocio.produtos.map(p => (
                 <div key={p.id} className={styles.produtoCard}>
-                  {p.imagem_url ? (
-                    <img src={p.imagem_url} alt={p.nome} className={styles.produtoImg} onError={e => { e.target.style.display = 'none'; }} />
-                  ) : (
-                    <div className={styles.produtoImgPlaceholder}><Package size={20} /></div>
-                  )}
+                  {p.imagem_url
+                    ? <img src={p.imagem_url} alt={p.nome} className={styles.produtoImg} onError={e => { e.target.style.display = 'none'; }} />
+                    : <div className={styles.produtoImgPlaceholder}><Package size={20} /></div>
+                  }
                   <div className={styles.produtoInfo}>
                     <strong>{p.nome}</strong>
                     {p.descricao && <span>{p.descricao}</span>}
@@ -187,7 +182,10 @@ export default function Vitrine() {
         {negocios.map(n => (
           <div key={n.id} className={styles.card} onClick={() => setNegocioSel(n)}>
             <div className={styles.cardTop}>
-              <div className={styles.avatar}>{(n.nome_negocio || '?').charAt(0)}</div>
+              {n.logo_url
+                ? <img src={n.logo_url} alt="Logo" className={styles.avatarImg} />
+                : <div className={styles.avatar}>{(n.nome_negocio || '?').charAt(0)}</div>
+              }
               <div>
                 <h3>{n.nome_negocio || 'Negócio'}</h3>
                 <span className={styles.distancia}><MapPin size={12} /> {parseFloat(n.distancia_km).toFixed(1)} km</span>
