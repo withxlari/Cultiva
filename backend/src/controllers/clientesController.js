@@ -20,16 +20,31 @@ export async function listar(req, res) {
 }
 
 export async function criar(req, res) {
-  const { nome, telefone, email, observacoes } = req.body;
+  const { nome, telefone, email, observacoes, temDivida, valorDivida } = req.body;
   if (!nome) return res.status(400).json({ error: 'Nome é obrigatório.' });
 
   try {
+    await pool.query('BEGIN');
+
     const result = await pool.query(
       'INSERT INTO clientes (usuario_id, nome, telefone, email, observacoes) VALUES ($1,$2,$3,$4,$5) RETURNING *',
       [req.usuario.id, nome, telefone, email, observacoes]
     );
-    return res.status(201).json(result.rows[0]);
+    
+    const novoCliente = result.rows[0];
+
+    if (temDivida && valorDivida && parseFloat(valorDivida) > 0) {
+      await pool.query(
+        `INSERT INTO vendas (usuario_id, cliente_id, descricao, valor, tipo, status)
+         VALUES ($1,$2,$3,$4,$5,$6)`,
+        [req.usuario.id, novoCliente.id, 'Dívida Inicial', parseFloat(valorDivida), 'fiado', 'pendente']
+      );
+    }
+
+    await pool.query('COMMIT');
+    return res.status(201).json(novoCliente);
   } catch (err) {
+    await pool.query('ROLLBACK');
     return res.status(500).json({ error: 'Erro ao criar cliente.', detail: err.message });
   }
 }

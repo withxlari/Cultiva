@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import api from '../services/api';
-import { MapPin, Search, Phone, Package, X, AtSign, Clock, CreditCard, ShoppingBag, Truck } from 'lucide-react';
+import { MapPin, Search, Phone, Package, X, AtSign, Clock, CreditCard, ShoppingBag, Truck, ExternalLink } from 'lucide-react';
 import styles from './Vitrine.module.css';
 
 function ModalNegocio({ negocio, onClose, fmt }) {
@@ -15,7 +15,7 @@ function ModalNegocio({ negocio, onClose, fmt }) {
       <div className={styles.modalBox} onClick={e => e.stopPropagation()}>
         <button className={styles.modalClose} onClick={onClose}><X size={20} /></button>
 
-        {negocio.capa_url && (
+        {negocio.capa_url && !negocio.is_osm && (
           <img src={negocio.capa_url} alt="Capa" className={styles.modalCapa} />
         )}
 
@@ -67,6 +67,11 @@ function ModalNegocio({ negocio, onClose, fmt }) {
           {negocio.instagram && (
             <a href={`https://instagram.com/${negocio.instagram.replace('@', '')}`} target="_blank" rel="noreferrer" className={styles.btnInstagram}>
               <AtSign size={15} /> {negocio.instagram.startsWith('@') ? negocio.instagram : `@${negocio.instagram}`}
+            </a>
+          )}
+          {negocio.is_osm && (
+            <a href={`https://www.openstreetmap.org/?mlat=${negocio.latitude}&mlon=${negocio.longitude}#map=18/${negocio.latitude}/${negocio.longitude}`} target="_blank" rel="noreferrer" className={styles.btnSecondary} style={{ display: 'inline-flex', alignItems: 'center', gap: '7px' }}>
+              <ExternalLink size={15} /> Ver no Mapa
             </a>
           )}
         </div>
@@ -197,6 +202,7 @@ export default function Vitrine() {
               <div className={styles.cardTags}>
                 {n.aceita_encomenda && <span className={styles.tagSmall}>Encomenda</span>}
                 {n.entrega_bairro && <span className={styles.tagSmall}>Entrega</span>}
+                {n.is_osm && <span className={styles.tagSmall}>OpenStreetMap</span>}
               </div>
             </div>
             {n.produtos && n.produtos.length > 0 && (

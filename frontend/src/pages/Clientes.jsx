@@ -3,7 +3,7 @@ import api from '../services/api';
 import { Plus, Pencil, Trash2, MessageCircle, History } from 'lucide-react';
 import styles from './Page.module.css';
 
-const formInicial = { nome: '', telefone: '', email: '', observacoes: '' };
+const formInicial = { nome: '', telefone: '', email: '', observacoes: '', temDivida: false, valorDivida: '' };
 
 export default function Clientes() {
   const [clientes, setClientes] = useState([]);
@@ -12,6 +12,7 @@ export default function Clientes() {
   const [modal, setModal] = useState(false);
   const [historico, setHistorico] = useState(null);
   const [clienteSel, setClienteSel] = useState(null);
+  const [mensagem, setMensagem] = useState({ texto: '', tipo: '' });
 
   useEffect(() => { carregar(); }, []);
 
@@ -23,21 +24,34 @@ export default function Clientes() {
   async function salvar(e) {
     e.preventDefault();
     try {
-      if (editando) await api.put(`/clientes/${editando}`, form);
-      else await api.post('/clientes', form);
+      if (editando) {
+        await api.put(`/clientes/${editando}`, form);
+      } else {
+        await api.post('/clientes', form);
+      }
+      setMensagem({ texto: 'Cliente salvo com sucesso!', tipo: 'sucesso' });
       setModal(false);
       setForm(formInicial);
       setEditando(null);
       carregar();
+      setTimeout(() => setMensagem({ texto: '', tipo: '' }), 3000);
     } catch (err) {
-      alert(err.response?.data?.error || 'Erro ao salvar.');
+      setMensagem({ texto: err.response?.data?.error || 'Erro ao salvar.', tipo: 'erro' });
+      setTimeout(() => setMensagem({ texto: '', tipo: '' }), 3000);
     }
   }
 
   async function deletar(id) {
     if (!confirm('Remover cliente?')) return;
-    await api.delete(`/clientes/${id}`);
-    carregar();
+    try {
+      await api.delete(`/clientes/${id}`);
+      setMensagem({ texto: 'Cliente removido!', tipo: 'sucesso' });
+      carregar();
+      setTimeout(() => setMensagem({ texto: '', tipo: '' }), 3000);
+    } catch (err) {
+      setMensagem({ texto: 'Erro ao remover.', tipo: 'erro' });
+      setTimeout(() => setMensagem({ texto: '', tipo: '' }), 3000);
+    }
   }
 
   async function verHistorico(c) {
@@ -53,7 +67,7 @@ export default function Clientes() {
   }
 
   function editar(c) {
-    setForm({ nome: c.nome, telefone: c.telefone || '', email: c.email || '', observacoes: c.observacoes || '' });
+    setForm({ nome: c.nome, telefone: c.telefone || '', email: c.email || '', observacoes: c.observacoes || '', temDivida: false, valorDivida: '' });
     setEditando(c.id);
     setModal(true);
   }
@@ -71,6 +85,12 @@ export default function Clientes() {
           <Plus size={16} /> Novo cliente
         </button>
       </div>
+
+      {mensagem.texto && (
+        <div className={mensagem.tipo === 'sucesso' ? styles.sucesso : styles.erro}>
+          {mensagem.texto}
+        </div>
+      )}
 
       <div className={styles.list}>
         {clientes.map(c => (
@@ -116,6 +136,34 @@ export default function Clientes() {
                   <input type="email" value={form.email} onChange={e => setForm({ ...form, email: e.target.value })} />
                 </div>
               </div>
+              
+              {!editando && (
+                <div className={styles.field}>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <input 
+                      type="checkbox" 
+                      checked={form.temDivida} 
+                      onChange={e => setForm({ ...form, temDivida: e.target.checked, valorDivida: '' })} 
+                    />
+                    Cliente possui dívida inicial?
+                  </label>
+                </div>
+              )}
+
+              {!editando && form.temDivida && (
+                <div className={styles.field}>
+                  <label>Valor da Dívida (R$)</label>
+                  <input 
+                    type="number" 
+                    step="0.01"
+                    min="0.01"
+                    value={form.valorDivida} 
+                    onChange={e => setForm({ ...form, valorDivida: e.target.value })} 
+                    required 
+                  />
+                </div>
+              )}
+
               <div className={styles.field}>
                 <label>Observações</label>
                 <textarea value={form.observacoes} onChange={e => setForm({ ...form, observacoes: e.target.value })} rows={2} />

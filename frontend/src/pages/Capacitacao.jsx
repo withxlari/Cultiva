@@ -5,6 +5,13 @@ import styles from './Page.module.css';
 
 const categoriasLabel = { financas: 'Finanças', gestao: 'Gestão', marketing: 'Marketing', formalizacao: 'Formalização' };
 
+const getYouTubeEmbedUrl = (url) => {
+  if (!url) return null;
+  const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|&v=)([^#&?]*).*/;
+  const match = url.match(regExp);
+  return (match && match[2].length === 11) ? `https://www.youtube.com/embed/${match[2]}` : null;
+};
+
 export default function Capacitacao() {
   const [conteudos, setConteudos] = useState([]);
   const [aberto, setAberto] = useState(null);
@@ -64,10 +71,24 @@ export default function Capacitacao() {
                     {aberto === c.id ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
                   </div>
                 </button>
+                
                 {aberto === c.id && (
                   <div className={styles.accordionBody}>
-                    {c.descricao && <p className={styles.acordDesc}>{c.descricao}</p>}
-                    {c.url_video && <a href={c.url_video} target="_blank" rel="noreferrer" className={styles.videoLink}>Assistir video</a>}
+                    {c.descricao && <p className={styles.acordDesc} style={{ marginBottom: '16px' }}>{c.descricao}</p>}
+                    
+                    {c.url_video && getYouTubeEmbedUrl(c.url_video) && (
+                      <div style={{ position: 'relative', paddingBottom: '56.25%', height: 0, overflow: 'hidden', borderRadius: '8px', marginBottom: '16px' }}>
+                        <iframe
+                          style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%' }}
+                          src={getYouTubeEmbedUrl(c.url_video)}
+                          title={c.titulo}
+                          frameBorder="0"
+                          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                          allowFullScreen
+                        ></iframe>
+                      </div>
+                    )}
+
                     {c.conteudo && <p className={styles.conteudoTexto}>{c.conteudo}</p>}
                   </div>
                 )}
