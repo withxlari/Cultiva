@@ -113,15 +113,17 @@ export default function Vitrine() {
 
   function localizarMe() {
     setLocalizando(true);
+    setErro('');
     navigator.geolocation.getCurrentPosition(
       (pos) => {
         setCoords({ lat: pos.coords.latitude, lng: pos.coords.longitude });
         setLocalizando(false);
       },
-      () => {
-        setErro('Não foi possível obter sua localização.');
+      (err) => {
+        setErro('Não foi possível obter sua localização. Verifique as permissões do navegador.');
         setLocalizando(false);
-      }
+      },
+      { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
     );
   }
 
@@ -133,7 +135,7 @@ export default function Vitrine() {
     setLoading(true);
     setErro('');
     try {
-      const { data } = await api.get(`/vitrine?lat=${coords.lat}&lng=${coords.lng}&raio_km=${raio}${busca ? `&busca=${busca}` : ''}`);
+      const { data } = await api.get(`/vitrine?lat=${coords.lat}&lng=${coords.lng}&raio_km=${raio}${busca ? `&busca=${encodeURIComponent(busca)}` : ''}`);
       setNegocios(data);
     } catch {
       setErro('Erro ao buscar negócios.');
@@ -155,9 +157,14 @@ export default function Vitrine() {
         <div className={styles.searchRow}>
           <div className={styles.searchInput}>
             <Search size={16} />
-            <input placeholder="Buscar produto ou serviço..." value={busca} onChange={e => setBusca(e.target.value)} onKeyDown={e => e.key === 'Enter' && coords && buscarNegocios()} />
+            <input
+              placeholder="Buscar produto ou serviço..."
+              value={busca}
+              onChange={e => setBusca(e.target.value)}
+              onKeyDown={e => e.key === 'Enter' && coords && buscarNegocios()}
+            />
           </div>
-          <select value={raio} onChange={e => setRaio(e.target.value)} className={styles.raioSelect}>
+          <select value={raio} onChange={e => setRaio(Number(e.target.value))} className={styles.raioSelect}>
             <option value={1}>1 km</option>
             <option value={2}>2 km</option>
             <option value={3}>3 km</option>

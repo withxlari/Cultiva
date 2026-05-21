@@ -4,7 +4,12 @@ import { useAuth } from '../contexts/AuthContext';
 import { Sprout } from 'lucide-react';
 import styles from './Auth.module.css';
 
-const categorias = ['Alimentação', 'Beleza', 'Costura', 'Artesanato', 'Serviços Gerais', 'Educação', 'Saúde', 'Outros'];
+const categorias = [
+  'Alimentação', 'Artesanato', 'Beleza', 'Casa e Decoração', 'Construção e Reformas', 
+  'Costura', 'Educação', 'Eventos e Festas', 'Mecânica', 'Mercado e Conveniência', 
+  'Pet Shop', 'Saúde', 'Serviços Gerais', 'Tecnologia e Eletrônicos', 
+  'Transporte e Frete', 'Vestuário e Moda', 'Outros'
+];
 
 export default function Register() {
   const [form, setForm] = useState({ nome: '', email: '', senha: '', nome_negocio: '', descricao_negocio: '', categoria: '', telefone: '' });

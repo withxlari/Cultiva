@@ -1,10 +1,19 @@
 import { useState, useEffect, useRef } from 'react';
 import api from '../services/api';
 import { uploadImagem } from '../services/cloudinary';
-import { MapPin, Save, CheckCircle, AtSign, Clock, CreditCard, ShoppingBag, Truck, Camera, ImagePlus } from 'lucide-react';
+import { MapPin, Save, CheckCircle, AtSign, Clock, CreditCard, ShoppingBag, Truck, Camera, ImagePlus, Search } from 'lucide-react';
 import styles from './Page.module.css';
 
-const categorias = ['Alimentação', 'Beleza', 'Costura', 'Artesanato', 'Serviços Gerais', 'Educação', 'Saúde', 'Outros'];
+const categorias = [
+  'Alimentação', 'Artesanato', 'Beleza', 'Casa e Decoração', 'Construção e Reformas',
+  'Costura', 'Educação', 'Eventos e Festas', 'Mecânica', 'Mercado e Conveniência',
+  'Pet Shop', 'Saúde', 'Serviços Gerais', 'Tecnologia e Eletrônicos',
+  'Transporte e Frete', 'Vestuário e Moda', 'Outros'
+];
+
+function formatarCep(v) {
+  return v.replace(/\D/g, '').slice(0, 8).replace(/(\d{5})(\d)/, '$1-$2');
+}
 
 export default function Perfil() {
   const [form, setForm] = useState({
@@ -14,12 +23,19 @@ export default function Perfil() {
     aceita_encomenda: false, entrega_bairro: false,
     logo_url: '', capa_url: '',
   });
+
+  const [endereco, setEndereco] = useState({
+    cep: '', logradouro: '', numero: '', complemento: '', bairro: '', cidade: '', estado: '',
+  });
+
   const [loading, setLoading] = useState(false);
-  const [localizando, setLocalizando] = useState(false);
+  const [buscandoCep, setBuscandoCep] = useState(false);
+  const [geocodificando, setGeocodificando] = useState(false);
   const [uploadandoLogo, setUploadandoLogo] = useState(false);
   const [uploadandoCapa, setUploadandoCapa] = useState(false);
   const [sucesso, setSucesso] = useState('');
   const [erro, setErro] = useState('');
+  const [erroEnd, setErroEnd] = useState('');
   const logoRef = useRef();
   const capaRef = useRef();
 
@@ -47,19 +63,95 @@ export default function Perfil() {
     carregar();
   }, []);
 
-  function capturarLocalizacao() {
-    setLocalizando(true);
-    setErro('');
-    navigator.geolocation.getCurrentPosition(
-      (pos) => {
-        setForm(f => ({ ...f, latitude: pos.coords.latitude, longitude: pos.coords.longitude }));
-        setLocalizando(false);
-      },
-      () => {
-        setErro('Não foi possível capturar a localização. Verifique as permissões do navegador.');
-        setLocalizando(false);
+  async function buscarCep(cepRaw) {
+    const cep = cepRaw.replace(/\D/g, '');
+    if (cep.length !== 8) return;
+    setBuscandoCep(true);
+    setErroEnd('');
+    try {
+      const res = await fetch(`https://viacep.com.br/ws/${cep}/json/`);
+      const data = await res.json();
+      if (data.erro) {
+        setErroEnd('CEP não encontrado.');
+        return;
       }
-    );
+      setEndereco(e => ({
+        ...e,
+        logradouro: data.logradouro || '',
+        bairro: data.bairro || '',
+        cidade: data.localidade || '',
+        estado: data.uf || '',
+      }));
+    } catch {
+      setErroEnd('Erro ao buscar CEP. Tente novamente.');
+    } finally {
+      setBuscandoCep(false);
+    }
+  }
+
+  async function nominatimBuscar(q) {
+    const url = `https://nominatim.openstreetmap.org/search?format=json&limit=1&countrycodes=BR&q=${encodeURIComponent(q)}`;
+    const res = await fetch(url, { headers: { 'Accept-Language': 'pt-BR', 'User-Agent': 'CultivaApp/1.0' } });
+    const data = await res.json();
+    return data && data.length > 0 ? data[0] : null;
+  }
+
+  async function geocodificarEndereco() {
+    const { cep, logradouro, numero, bairro, cidade, estado } = endereco;
+    if (!logradouro || !cidade) {
+      setErroEnd('Preencha pelo menos o logradouro e cidade antes de confirmar.');
+      return;
+    }
+    setGeocodificando(true);
+    setErroEnd('');
+
+    const enderecoCompleto = [logradouro, numero, bairro, cidade, estado].filter(Boolean).join(', ');
+
+    try {
+      let resultado = null;
+
+      resultado = await nominatimBuscar(`${logradouro}, ${numero}, ${bairro}, ${cidade}, ${estado}`);
+
+      if (!resultado) {
+        resultado = await nominatimBuscar(`${logradouro}, ${cidade}, ${estado}`);
+      }
+
+      if (!resultado) {
+        resultado = await nominatimBuscar(`${bairro}, ${cidade}, ${estado}`);
+      }
+
+      if (!resultado && cep) {
+        const cepLimpo = cep.replace(/\D/g, '');
+        const resCep = await fetch(`https://viacep.com.br/ws/${cepLimpo}/json/`);
+        const dadosCep = await resCep.json();
+        if (!dadosCep.erro) {
+          resultado = await nominatimBuscar(`${dadosCep.logradouro}, ${dadosCep.localidade}, ${dadosCep.uf}`);
+        }
+      }
+
+      if (!resultado) {
+        setErroEnd('Não foi possível localizar este endereço. Verifique se o logradouro e cidade estão corretos.');
+        return;
+      }
+
+      confirmarEndereco(resultado.lat, resultado.lon, enderecoCompleto);
+    } catch {
+      setErroEnd('Erro ao buscar coordenadas. Verifique sua conexão e tente novamente.');
+    } finally {
+      setGeocodificando(false);
+    }
+  }
+
+  function confirmarEndereco(lat, lon, enderecoCompleto) {
+    setForm(f => ({
+      ...f,
+      latitude: parseFloat(lat),
+      longitude: parseFloat(lon),
+      endereco_texto: enderecoCompleto,
+    }));
+    setErroEnd('');
+    setSucesso('Endereço localizado com sucesso!');
+    setTimeout(() => setSucesso(''), 3000);
   }
 
   async function handleUploadLogo(e) {
@@ -205,19 +297,114 @@ export default function Perfil() {
 
           <div className={styles.perfilCard}>
             <h2 className={styles.perfilSecao}>Localização</h2>
-            <p className={styles.perfilDica}>Sua localização é usada para aparecer na vitrine quando clientes buscam negócios próximos.</p>
-            <div className={styles.field}>
-              <label>Endereço (opcional)</label>
-              <input value={form.endereco_texto} onChange={e => setForm({ ...form, endereco_texto: e.target.value })} placeholder="Ex: Rua das Flores, 123 - Vila Nova" />
+            <p className={styles.perfilDica}>Preencha o endereço completo para aparecer corretamente na vitrine.</p>
+
+            {erroEnd && <div className={styles.erroMsg} style={{ marginBottom: 12 }}>{erroEnd}</div>}
+
+            <div className={styles.enderecoGrid}>
+              <div className={styles.field} style={{ gridColumn: '1 / 2' }}>
+                <label>CEP</label>
+                <div style={{ position: 'relative' }}>
+                  <input
+                    value={endereco.cep}
+                    onChange={e => {
+                      const v = formatarCep(e.target.value);
+                      setEndereco(en => ({ ...en, cep: v }));
+                      if (v.replace(/\D/g, '').length === 8) buscarCep(v);
+                    }}
+                    placeholder="00000-000"
+                    maxLength={9}
+                    style={{ paddingRight: 36 }}
+                  />
+                  {buscandoCep && (
+                    <span style={{ position: 'absolute', right: 10, top: '50%', transform: 'translateY(-50%)', fontSize: 11, color: 'var(--text-muted)' }}>
+                      Buscando...
+                    </span>
+                  )}
+                </div>
+              </div>
+
+              <div className={styles.field} style={{ gridColumn: '1 / -1' }}>
+                <label>Logradouro</label>
+                <input
+                  value={endereco.logradouro}
+                  onChange={e => setEndereco(en => ({ ...en, logradouro: e.target.value }))}
+                  placeholder="Rua, Avenida, Travessa..."
+                />
+              </div>
+
+              <div className={styles.field}>
+                <label>Número</label>
+                <input
+                  value={endereco.numero}
+                  onChange={e => setEndereco(en => ({ ...en, numero: e.target.value }))}
+                  placeholder="123"
+                />
+              </div>
+
+              <div className={styles.field}>
+                <label>Complemento</label>
+                <input
+                  value={endereco.complemento}
+                  onChange={e => setEndereco(en => ({ ...en, complemento: e.target.value }))}
+                  placeholder="Apto, Sala, Loja..."
+                />
+              </div>
+
+              <div className={styles.field}>
+                <label>Bairro</label>
+                <input
+                  value={endereco.bairro}
+                  onChange={e => setEndereco(en => ({ ...en, bairro: e.target.value }))}
+                  placeholder="Nome do bairro"
+                />
+              </div>
+
+              <div className={styles.field}>
+                <label>Cidade</label>
+                <input
+                  value={endereco.cidade}
+                  onChange={e => setEndereco(en => ({ ...en, cidade: e.target.value }))}
+                  placeholder="São Paulo"
+                />
+              </div>
+
+              <div className={styles.field} style={{ gridColumn: '1 / 2' }}>
+                <label>Estado</label>
+                <input
+                  value={endereco.estado}
+                  onChange={e => setEndereco(en => ({ ...en, estado: e.target.value }))}
+                  placeholder="SP"
+                  maxLength={2}
+                  style={{ textTransform: 'uppercase' }}
+                />
+              </div>
             </div>
-            <button type="button" className={styles.btnLocalizacao} onClick={capturarLocalizacao} disabled={localizando}>
-              <MapPin size={16} />
-              {localizando ? 'Capturando...' : form.latitude ? 'Atualizar localização' : 'Capturar minha localização'}
+
+            <button
+              type="button"
+              className={styles.btnLocalizacao}
+              onClick={geocodificarEndereco}
+              disabled={geocodificando || !endereco.logradouro}
+              style={{ marginTop: 8 }}
+            >
+              <Search size={16} />
+              {geocodificando ? 'Buscando localização...' : 'Confirmar endereço e buscar localização'}
             </button>
+
             {form.latitude && (
               <div className={styles.coordsInfo}>
                 <CheckCircle size={14} color="var(--success)" />
-                <span>Localização capturada: {parseFloat(form.latitude).toFixed(4)}, {parseFloat(form.longitude).toFixed(4)}</span>
+                <span>
+                  Localização confirmada: {parseFloat(form.latitude).toFixed(4)}, {parseFloat(form.longitude).toFixed(4)}
+                </span>
+              </div>
+            )}
+
+            {form.endereco_texto && (
+              <div className={styles.coordsInfo} style={{ marginTop: 4 }}>
+                <MapPin size={14} color="var(--primary)" />
+                <span style={{ fontSize: 12 }}>{form.endereco_texto}</span>
               </div>
             )}
           </div>
